@@ -25,7 +25,7 @@ var influx = new Influx.InfluxDB({
       maleGlobalContinentRanking: Influx.FieldType.INTEGER,
       maleGlobalCountryRanking: Influx.FieldType.INTEGER,
       numberOfVideos: Influx.FieldType.INTEGER,
-      votes: Influx.FieldType.INTEGER,
+      // votes: Influx.FieldType.INTEGER,
       friends: Influx.FieldType.INTEGER,
       fans: Influx.FieldType.INTEGER,
     },
@@ -52,10 +52,11 @@ request('https://www.xvideos.com/pornstar-channels/aidenvalentineofficial', func
     var maleGlobalWorldRanking = $("#pinfo-pornstar-global-ranks > span:nth-child(3) > strong > a").text().replace(/,/g, "");
     var maleGlobalContinentRanking = $("#pinfo-pornstar-global-ranks > span:nth-child(5) > strong > a").text().replace(/,/g, "");
     var maleGlobalCountryRanking = $("#pinfo-pornstar-global-ranks > span:nth-child(7) > strong > a").text().replace(/,/g, "");
-	var numberOfVideos = $("#tabAboutMe > h4 > a > strong").text().replace(/,/g, "");
-	var votes = $("#pfinfo-col-pict > div.rating-box > div > span").text().replace(/,/g, "");
-	var friends = $("#tab-friends > span.navbadge").text().split("/")[0].replace(/,/g, "").replace(/\s/g, "");
-	var fans = $("#tab-friends > span.navbadge").text().split("/")[1].replace(/,/g, "").replace(/\s/g, "");
+    var numberOfVideos = $("#tabAboutMe > h4 > a > strong").text().replace(/,/g, "");
+    // var votes = $("#pfinfo-col-pict > div.rating-box > div > span").text().replace(/,/g, "");
+    // console.log(votes);
+    var friends = $("#tab-friends > span.navbadge").text().split("/")[0].replace(/,/g, "").replace(/\s/g, "");
+    var fans = $("#tab-friends > span.navbadge").text().split("/")[1].replace(/,/g, "").replace(/\s/g, "");
 
     // Our parsed meta data object
     var metadata = {
@@ -73,7 +74,7 @@ request('https://www.xvideos.com/pornstar-channels/aidenvalentineofficial', func
       maleGlobalContinentRanking: parseInt(maleGlobalContinentRanking),
       maleGlobalCountryRanking: parseInt(maleGlobalCountryRanking),
       numberOfVideos: parseInt(numberOfVideos),
-      votes: parseInt(votes),
+      // votes: parseInt(votes),
       friends: parseInt(friends),
       fans: parseInt(fans),
       // timestamp:
@@ -101,7 +102,7 @@ request('https://www.xvideos.com/pornstar-channels/aidenvalentineofficial', func
           maleGlobalContinentRanking: metadata.maleGlobalContinentRanking,
           maleGlobalCountryRanking: metadata.maleGlobalCountryRanking,
           numberOfVideos: metadata.numberOfVideos,
-          votes: metadata.votes,
+          // votes: metadata.votes,
           friends: metadata.friends,
           fans: metadata.fans,
         },
