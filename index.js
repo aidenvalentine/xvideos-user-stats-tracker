@@ -134,8 +134,8 @@ request('https://www.xvideos.com/pornstar-channels/aidenvalentineofficial', func
           var data = {
             "dashboardId": 1,
             "panelId": 2,
-            "time": rows[0].time,
-            "timeEnd": rows[0].time,
+            "time": rows[0].time/100000, // Convert to Unix epoch seconds
+            "timeEnd": rows[0].time/100000, // Convert to Unix epoch seconds
             "tags": ["release"],
             "text": `${newVideosCount} new releases`
           }
