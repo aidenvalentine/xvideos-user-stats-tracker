@@ -2,6 +2,7 @@ const request = require("request");
 const cheerio = require("cheerio");
 const Influx = require("influx");
 
+// Influx data model for Xvideos User Statistics
 var influx = new Influx.InfluxDB({
   host: '127.0.0.1',
   database: 'xvideos_aiden_valentine_stats_db',
@@ -35,10 +36,12 @@ var influx = new Influx.InfluxDB({
   }]
 })
 
+// Send web crawler to user's profile page
 request('https://www.xvideos.com/pornstar-channels/aidenvalentineofficial', function(error, response, html) {
   if (!error && response.statusCode == 200) {
     var $ = cheerio.load(html);
 
+    // Grab variables from the document
     var profileHits = $("#pinfo-profile-hits > span").text().replace(/,/g, "");
     var subscribers = $("#pinfo-subscribers > span").text().replace(/,/g, "");
     var videosViews = $("#pinfo-videos-views > span").text().replace(/,/g, "");
@@ -113,7 +116,79 @@ request('https://www.xvideos.com/pornstar-channels/aidenvalentineofficial', func
       })
       .catch(error => {
         console.error(`Error saving data to InfluxDB! ${err.stack}`)
-      });
+      }).then(() => {
+        // Get last 2 entries from database to compare the video count.
+        return influx.query(`
+            select numberOfVideos from user_stats
+            order by time desc
+            limit 2
+          `)
+      }).then(rows => {
+        rows.forEach(row => console.log(`${row.numberOfVideos} videos at ${row.time}`)); // debug
+        // See if the video count has increase. If so, add annotations to Grafana dashboard.
+        if (rows[0].numberOfVideos > rows[1].numberOfVideos) {
+          var newVideosCount = rows[0].numberOfVideos - rows[1].numberOfVideos;
+          console.log(newVideosCount + " new videos.");
 
+          // Grafana create annotation api request body
+          var data = {
+            "dashboardId": 1,
+            "panelId": 2,
+            "time": rows[0].time,
+            "timeEnd": rows[0].time,
+            "tags": ["release"],
+            "text": `${newVideosCount} new releases`
+          }
+
+          // Request settings
+          const options = {
+            url: 'http://admin:admin@localhost:3001/api/annotations',
+            headers: {
+              'User-Agent': 'request',
+              'content-type': 'application/json',
+              'body': data
+            }
+          };
+
+          // Add Annotation to Subscribers Panel
+          request.post(options, function(error, response, html) {
+            if (!error && response.statusCode == 200) {
+              console.log(response);
+            } else {
+              console.error("Error adding annotation.");
+            }
+          });
+
+          // Add Annotation to Profile Hits Panel
+          options.header.body.panelId = 27;
+          request.post(options, function(error, response, html) {
+            if (!error && response.statusCode == 200) {
+              console.log(response);
+            } else {
+              console.error("Error adding annotation.");
+            }
+          });
+
+          // Add Annotation to Total Views Panel
+          options.header.body.panelId = 28;
+          request.post(options, function(error, response, html) {
+            if (!error && response.statusCode == 200) {
+              console.log(response);
+            } else {
+              console.error("Error adding annotation.");
+            }
+          });
+
+          // Add Annotation to Own Uploads Views Panel
+          options.header.body.panelId = 29;
+          request.post(options, function(error, response, html) {
+            if (!error && response.statusCode == 200) {
+              console.log(response);
+            } else {
+              console.error("Error adding annotation.");
+            }
+          });
+        }
+      })
   }
 });
