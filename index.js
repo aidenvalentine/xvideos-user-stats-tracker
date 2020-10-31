@@ -2,10 +2,14 @@ const request = require("request");
 const cheerio = require("cheerio");
 const Influx = require("influx");
 
+// Set your variables
+var influxDbName = "xvideos_aiden_valentine_stats_db";
+var xvideosProfileUrl = "https://www.xvideos.com/pornstar-channels/aidenvalentineofficial";
+
 // Influx data model for Xvideos User Statistics
 var influx = new Influx.InfluxDB({
   host: '127.0.0.1',
-  database: 'xvideos_aiden_valentine_stats_db',
+  database: influxDbName,
   username: '',
   password: '',
   port: 8086,
@@ -37,7 +41,7 @@ var influx = new Influx.InfluxDB({
 })
 
 // Send web crawler to user's profile page
-request('https://www.xvideos.com/pornstar-channels/aidenvalentineofficial', function(error, response, html) {
+request(xvideosProfileUrl, function(error, response, html) {
   if (!error && response.statusCode == 200) {
     var $ = cheerio.load(html);
 
@@ -111,7 +115,7 @@ request('https://www.xvideos.com/pornstar-channels/aidenvalentineofficial', func
         },
         // timestamp: tidePoint.epoch,
       }], {
-        database: 'xvideos_aiden_valentine_stats_db',
+        database: influxDbName,
         precision: 's',
       })
       .catch(error => {
