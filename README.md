@@ -11,7 +11,7 @@
 1. InfluxDB running on a accessible machine.
 
 # Installation
-1. Navigate to project directory and install npm packages using ```npm install```.
+1. Navigate to project directory in command prompt/shell and install npm packages using ```npm install```.
 2. Create new task on Windows 10 using __Task Scheduler__.
  1. General Tab - Tick __Hidden__
  1. General Tab - __Run whether user is logged in or not__
