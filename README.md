@@ -7,7 +7,7 @@
 # Requirements
 1. Node.js installed on the computer running this program.
 1. NPM installed.
-1. Grafana Server running on an accessible URL.
+1. Grafana Server running on an accessible URL. (Optional - For Adding Annotations to your dashboard.)
 1. InfluxDB running on a accessible machine.
 
 # Installation
