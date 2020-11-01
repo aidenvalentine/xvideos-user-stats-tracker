@@ -11,4 +11,10 @@
 1. InfluxDB running on a accessible machine.
 
 # Installation
-Navigate to project directory and install npm packages using ```npm install```.
+1. Navigate to project directory and install npm packages using ```npm install```.
+2. Create new task on Windows 10 using __Task Scheduler__.
+ 1. General Tab - Tick __Hidden__
+ 1. General Tab - __Run whether user is logged in or not__
+ 1. Trigger - __At system startup__ - __After triggered, repeat every 5-10 minutes indefinitely.__
+ 1. Actions > Settings > Action - __Start a program__ - __"C:\Program Files\nodejs\node.exe"__
+ 1. Actions > Settings > Add arguments - __C:\Users\%USERPROFILE%\Documents\xvideos-user-stats-tracker\index.js__
