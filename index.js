@@ -66,7 +66,7 @@ request(xvideosProfileUrl, function(error, response, html) {
     // console.log(votes);
     metadata.friends = parseInt($("#tab-friends > span.navbadge").text().split("/")[0].replace(/,/g, "").replace(/\s/g, ""));
     metadata.fans = parseInt($("#tab-friends > span.navbadge").text().split("/")[1].replace(/,/g, "").replace(/\s/g, ""));
-    metadata.username = parseInt($("#profile-title > h2 > strong").text();
+    metadata.username = $("#profile-title > h2 > strong").text();
 
     // console.log(metadata); // debug
 
@@ -82,7 +82,7 @@ request(xvideosProfileUrl, function(error, response, html) {
         influx.writePoints([{
             measurement: 'user_stats',
             tags: {
-              username: username,
+              username: metadata.username,
             },
             fields: {
               profileHits: metadata.profileHits,
