@@ -1,18 +1,49 @@
 const puppeteer = require('puppeteer');
 const request = require('request-promise-native');
 const poll = require('promise-poller').default;
+const Influx = require("influx");
+
+// Get user config from .env file
+require('dotenv').config()
 
 const siteDetails = {
   sitekey: '6LcM6ScUAAAAAHFxb4HmgMyNHrfi61bf_USRJ4uo',
   pageurl: 'https://www.xvideos.com/account'
 }
 
-// const getUsername = require('./get-username');
-// const getPassword = require('./get-password');
-const username = "valleytechindustries@gmail.com";
-const password = "^HWXgYy6@0TRH4alS7v%5IT!Vw8ZBAFe";
-const apiKey = "a944d6976c956a33f3f66cfec53a895a";
-// console.log(apiKey);
+// Grab your variables from the .env file. Make sure these values are set!
+const username = process.env.XVIDEOS_USERNAME;
+const password = process.env.XVIDEOS_PASSWORD;
+const apiKey = process.env.CAPTCHA_API_KEY;
+const dbName = process.env.DB_NAME;
+const dbHost = process.env.DB_HOST || "127.0.0.1";
+const dbUser = process.env.DB_USER || "";
+const dbPass = process.env.DB_PASS || "";
+const dbPort = process.env.DB_PORT || 8086;
+
+// Influx data model for Xvideos Earnings Statistics
+var earnings = new Influx.InfluxDB({
+  host: dbHost,
+  database: dbName,
+  username: dbUser,
+  password: dbPass,
+  port: dbPort,
+  schema: [{
+    measurement: 'earnings_stats',
+    fields: {
+      totalViews: Influx.FieldType.INTEGER,
+      paidViews: Influx.FieldType.INTEGER,
+      networkViews: Influx.FieldType.INTEGER,
+      xvideosViews: Influx.FieldType.INTEGER,
+      freeVideosEarnings: Influx.FieldType.FLOAT,
+      totalEarnings: Influx.FieldType.FLOAT,
+      xvideosRedEarnings: Influx.FieldType.FLOAT,
+    },
+    tags: [
+      'username'
+    ]
+  }]
+})
 
 // Make our browser look less like a robot! An ounce of prevention...
 const args = [
@@ -27,9 +58,9 @@ const args = [
 
 const chromeOptions = {
   args,
-  executablePath: 'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
-  headless: false,
-  slowMo: 10,
+  executablePath:'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+  headless:false, // To debug, set to true and it'll show the browser window.
+  slowMo:10,
   defaultViewport: null
 };
 
@@ -42,10 +73,8 @@ const chromeOptions = {
 
   const requestId = await initiateCaptchaRequest(apiKey);
 
-  // await page.type('#user_reg', getUsername());
   await page.type('body #signin-form_login', username);
 
-  // const password = getPassword();
   await page.type('body #signin-form_password', password);
 
   page.click('#signin-form > div.form-group.form-buttons > div > button');
@@ -54,17 +83,42 @@ const chromeOptions = {
 
   await page.evaluate(`document.getElementById("g-recaptcha-response").innerHTML="${response}";`);
 
-  // page.click('#signin-form > div.form-group.form-buttons > div > button');
   await page.evaluate("document.getElementById('signin-form').submit();");
 
   await page.waitForSelector('div#page.account-page');
 
-  await page.on('console', msg => console.log(msg.text()));
-
   await page.on('response', async (response) => {
     if (response.url() == "https://www.xvideos.com/account/uploads/statistics.json") {
       console.log('XHR response received');
-      console.log(await response.json());
+      var data = await response.json();
+      data.graph_stats.forEach((item, i) => {
+        console.log("Adding/updating row in database", item);
+        // Write data to database
+        earnings.writePoints([{
+            measurement: 'earnings_stats',
+            tags: {
+              username: "Aiden Valentine Official",
+            },
+            fields: {
+              totalViews: item.v,
+              paidViews: item.r,
+              networkViews: item.o,
+              xvideosViews: item.x,
+              freeVideosEarnings: item.e,
+              totalEarnings: item.te,
+              xvideosRedEarnings: item.f,
+            },
+            timestamp: new Date(item.date).getTime() / 1000,
+          }], {
+            database: dbName,
+            precision: 's',
+          })
+          .catch(error => {
+            console.error(`Error saving data to InfluxDB! ${err.stack}`)
+          })
+      });
+      console.log("Database update complete.");
+      await browser.close();
     }
   });
 
@@ -77,40 +131,14 @@ const chromeOptions = {
       data: "uploader-stats-filter%5Bdates%5D%5Bfrom%5D=&uploader-stats-filter%5Bdates%5D%5Bto%5D=&with_sub_accounts=0",
       success: function(result) {
         console.log(result);
-        // stats = result; // Set our global stats object with this nice dataset.
-        // cb(result);
       },
       dataType: "json"
     });
-
-    // return await new Promise(resolve => {
-    //   setTimeout(() => {
-    //     resolve([1, 2, 3]);
-    //   }, 3000)
-    // });
   });
-
-  // let msg = await page.evaluate(function() {
-  //   // The PROPER way of getting the stats via AJAX
-  //   $.ajax({
-  //     type: "POST",
-  //     url: "https://www.xvideos.com/account/uploads/statistics.json",
-  //     data: "uploader-stats-filter%5Bdates%5D%5Bfrom%5D=&uploader-stats-filter%5Bdates%5D%5Bto%5D=&with_sub_accounts=0",
-  //     success: function(result) {
-  //       console.log(result);
-  //       // stats = result; // Set our global stats object with this nice dataset.
-  //       let msg = result;
-  //     },
-  //     dataType: "json"
-  //   });
-  //   return msg;
-  // });
-  // console.log(msg);
-
 })()
 
 async function initiateCaptchaRequest(apiKey) {
-  console.log("Sending request to 2captcha");
+  console.log("Sending captcha data to 2captcha for solving.");
   const formData = {
     method: 'userrecaptcha',
     googlekey: siteDetails.sitekey,
@@ -118,14 +146,11 @@ async function initiateCaptchaRequest(apiKey) {
     pageurl: siteDetails.pageurl,
     json: 1
   };
-  const response = await request.post('http://2captcha.com/in.php', {
-    form: formData
-  });
+  const response = await request.post('http://2captcha.com/in.php', {form: formData});
   return JSON.parse(response).request;
 }
 
 async function pollForRequestResults(key, id, retries = 30, interval = 1500, delay = 15000) {
-  console.log("Polling for results");
   await timeout(delay);
   return poll({
     taskFn: requestCaptchaResults(key, id),
@@ -137,7 +162,7 @@ async function pollForRequestResults(key, id, retries = 30, interval = 1500, del
 function requestCaptchaResults(apiKey, requestId) {
   const url = `http://2captcha.com/res.php?key=${apiKey}&action=get&id=${requestId}&json=1`;
   return async function() {
-    return new Promise(async function(resolve, reject) {
+    return new Promise(async function(resolve, reject){
       const rawResponse = await request.get(url);
       const resp = JSON.parse(rawResponse);
       console.log(resp);
