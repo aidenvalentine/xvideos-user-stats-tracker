@@ -1,5 +1,8 @@
 const puppeteer = require('puppeteer');
-const request = require('request-promise-native');
+const request = require('request-promise-native').defaults({
+  // proxy: 'http://username:password@host:port', // Fixes potential timeout issues.
+  strictSSL: false // Fixes potential timeout issues.
+});
 const poll = require('promise-poller').default;
 const Influx = require("influx");
 
@@ -42,7 +45,10 @@ var earnings = new Influx.InfluxDB({
     tags: [
       'username'
     ]
-  }]
+  }],
+  options: {
+    timeout: 5 * 60 * 1000 // Increase the timeout -- it's a lot of data. Fixes potential timeout issues.
+  }
 })
 
 // Make our browser look less like a robot! An ounce of prevention...
