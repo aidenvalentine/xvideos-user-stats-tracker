@@ -53,37 +53,40 @@ var earnings = new Influx.InfluxDB({
 
 // Make our browser look less like a robot! An ounce of prevention...
 const args = [
-    '--no-sandbox',
-    '--disable-setuid-sandbox',
-    '--disable-infobars',
-    '--window-position=0,0',
-    '--ignore-certifcate-errors',
-    '--ignore-certifcate-errors-spki-list',
-    '--user-agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/65.0.3312.0 Safari/537.36"'
+  '--no-sandbox',
+  '--disable-setuid-sandbox',
+  '--disable-infobars',
+  '--window-position=0,0',
+  '--ignore-certifcate-errors',
+  '--ignore-certifcate-errors-spki-list',
+  '--user-agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/65.0.3312.0 Safari/537.36"'
 ];
 
 const chromeOptions = {
   args,
-  executablePath:'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
-  headless:false, // To debug, set to true and it'll show the browser window.
-  slowMo:10,
+  executablePath: 'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+  headless: false, // To debug, set to true and it'll show the browser window.
+  slowMo: 10,
   defaultViewport: null
 };
 
 (async function main() {
+  var arr = []; // data array for influxdb batch job.
+
   const browser = await puppeteer.launch(chromeOptions);
 
   const page = await browser.newPage();
 
   await page.goto('https://www.xvideos.com/account');
 
+  await page.type('#signin-form_login', username);
+
+  await page.type('#signin-form_password', password);
+
   const requestId = await initiateCaptchaRequest(apiKey);
 
-  await page.type('body #signin-form_login', username);
-
-  await page.type('body #signin-form_password', password);
-
-  page.click('#signin-form > div.form-group.form-buttons > div > button');
+  // Manually trigger recaptcha so this script works every time. Maybe we could add logic to tell if recaptcha was triggered or not to decide if we even need to solve one.
+  await page.evaluate(`grecaptcha.execute();`);
 
   const response = await pollForRequestResults(apiKey, requestId);
 
@@ -98,30 +101,31 @@ const chromeOptions = {
       console.log('XHR response received');
       var data = await response.json();
       data.graph_stats.forEach((item, i) => {
-        console.log("Adding/updating row in database", item);
-        // Write data to database
-        earnings.writePoints([{
-            measurement: 'earnings_stats',
-            tags: {
-              username: "Aiden Valentine Official",
-            },
-            fields: {
-              totalViews: item.v,
-              paidViews: item.r,
-              networkViews: item.o,
-              xvideosViews: item.x,
-              freeVideosEarnings: item.e,
-              totalEarnings: item.te,
-              xvideosRedEarnings: item.f,
-            },
-            timestamp: new Date(item.date).getTime() / 1000,
-          }], {
-            database: dbName,
-            precision: 's',
-          })
-          .catch(error => {
-            console.error(`Error saving data to InfluxDB! ${err.stack}`)
-          })
+        var obj = {
+          measurement: 'earnings_stats',
+          tags: {
+            username: "Aiden Valentine Official",
+          },
+          fields: {
+            totalViews: item.v,
+            paidViews: item.r,
+            networkViews: item.o,
+            xvideosViews: item.x,
+            freeVideosEarnings: item.e,
+            totalEarnings: item.te,
+            xvideosRedEarnings: item.f,
+          },
+          timestamp: new Date(item.date).getTime() / 1000,
+        };
+        console.log("Adding item to array.\n", obj);
+        arr.push(obj);
+
+        // On last record, send the array w/ earnings data to the database.
+        if (i == data.graph_stats.length - 1) {
+          writeData(arr);
+          console.log(arr);
+          console.log("Writing data to database.");
+        }
       });
       console.log("Database update complete.");
       await browser.close();
@@ -152,7 +156,9 @@ async function initiateCaptchaRequest(apiKey) {
     pageurl: siteDetails.pageurl,
     json: 1
   };
-  const response = await request.post('http://2captcha.com/in.php', {form: formData});
+  const response = await request.post('http://2captcha.com/in.php', {
+    form: formData
+  });
   return JSON.parse(response).request;
 }
 
@@ -168,7 +174,7 @@ async function pollForRequestResults(key, id, retries = 30, interval = 1500, del
 function requestCaptchaResults(apiKey, requestId) {
   const url = `http://2captcha.com/res.php?key=${apiKey}&action=get&id=${requestId}&json=1`;
   return async function() {
-    return new Promise(async function(resolve, reject){
+    return new Promise(async function(resolve, reject) {
       const rawResponse = await request.get(url);
       const resp = JSON.parse(rawResponse);
       console.log(resp);
@@ -179,3 +185,15 @@ function requestCaptchaResults(apiKey, requestId) {
 }
 
 const timeout = millis => new Promise(resolve => setTimeout(resolve, millis))
+
+// Send as a batch job so we don't kill/overload the database API. It's nice.
+function writeData(data) {
+  // Write data to database
+  earnings.writePoints(data, {
+      database: dbName,
+      precision: 's',
+    })
+    .catch(error => {
+      console.error(`Error saving data to InfluxDB! ${error}`)
+    })
+}
