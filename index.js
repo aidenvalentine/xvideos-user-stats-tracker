@@ -126,8 +126,8 @@ request(xvideosProfileUrl, function(error, response, html) {
 
               // Grafana create annotation api request body
               var data = {
-                "time": rows[0].time, // Convert to Unix epoch seconds
-                "timeEnd": rows[0].time, // Convert to Unix epoch seconds
+                "time": rows[0].time.getNanoTime()/1000000, // Convert to Unix epoch seconds
+                "timeEnd": rows[0].time.getNanoTime()/1000000, // Convert to Unix epoch seconds
                 "tags": ["release"],
                 "text": `${newVideosCount} new releases`
               }
