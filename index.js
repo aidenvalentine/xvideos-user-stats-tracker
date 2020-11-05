@@ -71,7 +71,7 @@ request(xvideosProfileUrl, function(error, response, html) {
     // console.log(metadata); // debug
 
     // Send web crawler to videos page to get the updated # of videos. (More accurate than profile page)
-    request(xvideosProfileUrl + "#_tabVideos", function(error, response, html) {
+    request(xvideosProfileUrl + "#_tabVideos,videos-new", function(error, response, html) {
       if (!error && response.statusCode == 200) {
         var $ = cheerio.load(html);
         metadata.numberOfVideos = parseInt($("#tabAboutMe > h4 > a > strong").text());
