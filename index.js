@@ -37,7 +37,10 @@ var influx = new Influx.InfluxDB({
     tags: [
       'username'
     ]
-  }]
+  }],
+  options: {
+    timeout: 5 * 60 * 1000 // Increase the timeout -- it's a lot of data. Fixes potential timeout issues.
+  }
 })
 
 var metadata = {}; // Create global variable.
